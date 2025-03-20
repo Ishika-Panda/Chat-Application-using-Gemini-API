@@ -1,14 +1,23 @@
 const chatBody = document.querySelector(".chatbot-body");
 const messageInput = document.querySelector(".message-input");
 const sendMessageButton = document.querySelector("#send-message");
+const fileInput = document.querySelector("#file-input");
+const fileUploadWrapper = document.querySelector(".file-upload-wrapper");
+const fileCancelButton = document.querySelector("#file-cancel");
 
-require('dotenv').config();
-const API_KEY = process.env.API_KEY;
+const API_KEY = "AIzaSyCoMR6gjm6SKzGXdqInbQLKUo3gsWbN8RI";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
 const userData = {
-    message: null
+    message: null,
+    file: {
+        data: null,
+        mime_type: null
+    }
 }
+
+const chatHistory = [];
+const initialInputHeight = messageInput.scrollHeight;
 
 const createMessageElement = (content, ...classes) => {
     const div = document.createElement("div");
@@ -20,14 +29,17 @@ const createMessageElement = (content, ...classes) => {
 const generateBotResponse = async (incoingMessageDiv) => {
 
     const messageElement = incoingMessageDiv.querySelector(".message-text");
+    
+    chatHistory.push({
+        role: "user",
+        parts: [{text: userData.message}, ...(userData.file.data ? [{inline_data: userData.file}] : [])]
+    });
 
     const requestOptions = {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            contents: [{
-                parts: [{text: userData.message}]
-            }]
+            contents: chatHistory    
         })
     }
 
@@ -38,6 +50,12 @@ const generateBotResponse = async (incoingMessageDiv) => {
         
         const apiResponseText = data.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, "$1").trim();
         messageElement.innerText = apiResponseText;
+
+        chatHistory.push({
+            role: "model",
+            parts: [{text: apiResponseText}]
+        });
+    
     } 
     catch(error) {
         console.log(error);
@@ -45,6 +63,7 @@ const generateBotResponse = async (incoingMessageDiv) => {
         messageElement.style.color = "#ff0000";
     }
     finally{
+        userData.file = {data: null, mime_type: null};
         incoingMessageDiv.classList.remove("thinking");
         chatBody.scrollTo({top: chatBody.scrollHeight, behavior: "smooth"});
     }
@@ -55,8 +74,11 @@ const handleOutgoingMessage = (e) => {
 
     userData.message = messageInput.value.trim();
     messageInput.value = "";
+    fileUploadWrapper.classList.remove("file-uploaded");
+    messageInput.dispatchEvent(new Event("input"));
 
-    const messageContent = `<div class="message-text"></div>`;
+    const messageContent = `<div class="message-text"></div>
+                            ${userData.file.data ? `<img src = "data:${userData.file.mime_type}; base64, ${userData.file.data}" class="attachment"/>` : ""}`;
     const outgoingMessageDiv = createMessageElement(messageContent, "user-message");
     outgoingMessageDiv.querySelector(".message-text").innerText = userData.message ;
     chatBody.appendChild(outgoingMessageDiv);
@@ -82,9 +104,63 @@ const handleOutgoingMessage = (e) => {
 
 messageInput.addEventListener("keydown", (e) => {
     const userMessage = e.target.value.trim();
-    if (e.key === "Enter" && userMessage) {
+    if (e.key === "Enter" && userMessage && !e.shiftKey && window.innerWidth > 768) {
         handleOutgoingMessage(e);
     }
 });
 
+messageInput.addEventListener("input", () => {
+    messageInput.style.height = `${initialInputHeight}px`;
+    messageInput.style.height = `${messageInput.scrollHeight}px`;
+    document.querySelector(".chat-form").style.borderRadius = messageInput.scrollHeight > initialInputHeight ? "15px" : "30px";
+});
+
+fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        fileUploadWrapper.querySelector("img").src = e.target.result;
+        fileUploadWrapper.classList.add("file-uploaded");
+        const base64String = e.target.result.split(",")[1];
+
+        userData.file = {
+            data: base64String,
+            mime_type: file.type
+        }
+        fileInput.value = "";
+    }
+    reader.readAsDataURL(file);
+});
+
+fileCancelButton.addEventListener("click", () => {
+    userData.file = {};
+    fileUploadWrapper.classList.remove("file-uploaded");
+});
+
+const picker = new EmojiMart.Picker({
+    theme: "light",
+    skinTonePosition: "none",
+    previewPosition: "none",
+    onEmojiSelect: (emoji) => {
+        const {selectionStart: start, selectionEnd: end} = messageInput;
+        messageInput.setRangeText(emoji.native, start, end, "end");
+        messageInput.focus();
+    },
+
+    onClickOutside: (e) => {
+        if(e.target.id === "emoji-picker") {
+            document.body.classList.toggle("show-emoji-picker");
+        }
+        else{
+            document.body.classList.remove("show-emoji-picker");
+        }
+    }
+})
+
+document.querySelector(".chat-form").appendChild(picker);
+
 sendMessageButton.addEventListener("click", (e) => handleOutgoingMessage(e));
+document.querySelector("#file-upload").addEventListener("click", () => fileInput.click());
+
