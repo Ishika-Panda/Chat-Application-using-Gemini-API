@@ -2,7 +2,8 @@ const chatBody = document.querySelector(".chatbot-body");
 const messageInput = document.querySelector(".message-input");
 const sendMessageButton = document.querySelector("#send-message");
 
-const API_KEY = "AIzaSyCoMR6gjm6SKzGXdqInbQLKUo3gsWbN8RI";
+require('dotenv').config();
+const API_KEY = process.env.API_KEY;
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
 const userData = {
