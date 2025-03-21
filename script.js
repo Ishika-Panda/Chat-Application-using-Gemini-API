@@ -5,8 +5,12 @@ const fileInput = document.querySelector("#file-input");
 const fileUploadWrapper = document.querySelector(".file-upload-wrapper");
 const fileCancelButton = document.querySelector("#file-cancel");
 
-require('dotenv').config();
-const API_KEY = process.env.API_KEY;
+const API_KEY = localStorage.getItem("API_KEY"); 
+if (!API_KEY) {
+    API_KEY = prompt("Enter your API Key:");
+    localStorage.setItem("API_KEY", API_KEY);
+}
+
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
 const userData = {
