@@ -5,27 +5,7 @@ const fileInput = document.querySelector("#file-input");
 const fileUploadWrapper = document.querySelector(".file-upload-wrapper");
 const fileCancelButton = document.querySelector("#file-cancel");
 
-function getAPIKey() {
-    let API_KEY = localStorage.getItem("API_KEY");
-
-    if (!API_KEY) {
-        API_KEY = prompt("Enter your API Key:");
-        if (API_KEY) {
-            localStorage.setItem("API_KEY", API_KEY);
-        } else {
-            alert("API Key is required to use the chatbot.");
-            return null;
-        }
-    }
-
-    return API_KEY;
-}
-
-const API_KEY = getAPIKey();
-if (!API_KEY) {
-    throw new Error("API key is missing. Please reload and enter a valid API key.");
-}
-
+const API_KEY = " ${{ secrets.API_KEY }} ";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
 const userData = {
